@@ -1,6 +1,6 @@
 # Zaproszenie na Urodziny Hani 🎉
 
-Statyczna strona zaproszenia z animacją oraz grą pamięć (memory game).
+Statyczna strona zaproszenia z animacją oraz grą pamięć (memory game)..
 
 ## Lokalizacja imprezy:
 **Sala Zabaw KIDSY**  
