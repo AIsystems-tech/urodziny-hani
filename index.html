@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -27,28 +26,35 @@
     h1 {
       font-size: 2.5em;
       color: #d6336c;
+    }
+    .game-section {
+      text-align: center;
+      margin: 30px;
+    }
+    .memory-controls {
       margin-bottom: 10px;
     }
-    .contact, .game-section {
-      margin-top: 20px;
-    }
     .memory-game {
+      position: relative;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
       gap: 10px;
       justify-content: center;
       margin-top: 20px;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
     }
     .card {
-      width: 80px;
-      height: 80px;
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(to right, #6a11cb, #2575fc);
+      color: white;
+      font-size: 1.5em;
       display: flex;
       align-items: center;
       justify-content: center;
       border-radius: 10px;
-      font-size: 2em;
-      background: linear-gradient(to right, #6a11cb, #2575fc);
-      color: white;
       cursor: pointer;
       transition: transform 0.3s ease;
     }
@@ -59,38 +65,18 @@
       background: white;
       color: #2575fc;
     }
-    .coloring-area {
-      margin-top: 20px;
-      text-align: center;
-    }
-    canvas {
-      border: 2px solid #ccc;
-      border-radius: 10px;
+    canvas#line-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0;
+      pointer-events: none;
     }
     footer {
-      margin-top: 40px;
       text-align: center;
       font-size: 0.9em;
       color: #666;
-    }
-    #cookie-banner {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: #333;
-      color: white;
-      padding: 10px;
-      text-align: center;
-    }
-    #cookie-banner button {
-      background: #d6336c;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      margin-left: 10px;
-      border-radius: 5px;
-      cursor: pointer;
+      margin-top: 40px;
     }
   </style>
 </head>
@@ -101,22 +87,26 @@
     <p><strong>08 czerwca 2025</strong>, godz. 11:00</p>
     <p><strong>Sala Zabaw KIDSY</strong><br />Mętów 199D, 20-388 Lublin</p>
     <a href="https://www.google.com/maps?q=Mętów+199D,+20-388+Lublin">Znajdź na mapie</a>
-    <div class="contact">
-      <p>Kontakt:<br />Kasia: <a href="tel:511140236">511 140 236</a> | Maciej: <a href="tel:531765279">531 765 279</a></p>
-    </div>
+    <p>Kontakt: Kasia <a href="tel:511140236">511 140 236</a> | Maciej <a href="tel:531765279">531 765 279</a></p>
+    <p style="margin-top: 20px;">Zeskanuj QR kod:</p>
+    <img src="qr_kod.png" alt="QR kod" width="160">
   </div>
 
   <div class="game-section">
     <h2>🎯 Gra pamięci</h2>
-    <div class="memory-game" id="memory-game"></div>
-    <p>Ruchy: <span id="memory-moves">0</span> | Czas: <span id="memory-time">0</span>s</p>
-
-    <h2>🎨 Pokoloruj!</h2>
-    <div class="coloring-area">
-      <canvas id="colorCanvas" width="300" height="200"></canvas><br />
-      <p>Czas kolorowania: <span id="color-time">0</span>s</p>
-      <button onclick="clearCanvas()">Wyczyść</button>
+    <div class="memory-controls">
+      <label for="difficulty">Wybierz poziom:</label>
+      <select id="difficulty">
+        <option value="easy">Łatwy (8 kart)</option>
+        <option value="hard">Trudny (18 kart)</option>
+      </select>
+      <button onclick="startGame()">Start</button>
     </div>
+    <div style="position: relative;">
+      <canvas id="line-canvas" width="800" height="600"></canvas>
+      <div class="memory-game" id="memory-game"></div>
+    </div>
+    <p>Ruchy: <span id="memory-moves">0</span> | Czas: <span id="memory-time">0</span>s</p>
   </div>
 
   <footer>
@@ -124,98 +114,94 @@
     <img src="logo.png" alt="Logo" width="120" />
   </footer>
 
-  <div id="cookie-banner">
-    Ta strona używa plików cookie. <button onclick="acceptCookies()">Akceptuję</button>
-  </div>
-
   <script>
-    // MEMORY GAME
-    const emojis = ['🍰','🎈','🎉','🎁','🎂','🧸','🍬','🍭'];
-    let cards = [...emojis, ...emojis];
-    let flipped = [], matched = [];
-    let memoryMoves = 0, memoryTimer = 0;
+    const easyEmojis = ['🍰','🎈','🎉','🎁','🎂','🧸','🍬','🍭'];
+    const hardEmojis = ['🍰','🎈','🎉','🎁','🎂','🧸','🍬','🍭','🐶','🐱','🐭','🐹','🐰','🦊','🐻'];
+    let cards = [], flipped = [], matched = [], moves = 0, timer = 0, interval;
+    const game = document.getElementById('memory-game');
+    const canvas = document.getElementById('line-canvas');
+    const ctx = canvas.getContext('2d');
 
     function shuffle(array) {
       return array.sort(() => Math.random() - 0.5);
     }
 
-    function createBoard() {
-      const game = document.getElementById('memory-game');
+    function startGame() {
+      clearInterval(interval);
+      timer = 0;
+      moves = 0;
+      flipped = [];
+      matched = [];
+      document.getElementById('memory-time').textContent = timer;
+      document.getElementById('memory-moves').textContent = moves;
+      const level = document.getElementById('difficulty').value;
+      let emojis = level === 'easy' ? easyEmojis : hardEmojis;
+      cards = shuffle([...emojis, ...emojis]);
       game.innerHTML = '';
-      shuffle(cards).forEach((emoji, i) => {
+      setTimeout(drawLines, 200);
+
+      cards.forEach((emoji, index) => {
         const card = document.createElement('div');
         card.classList.add('card');
-        card.dataset.index = i;
+        card.dataset.index = index;
         card.dataset.emoji = emoji;
         card.addEventListener('click', flipCard);
         game.appendChild(card);
       });
+
+      interval = setInterval(() => {
+        timer++;
+        document.getElementById('memory-time').textContent = timer;
+      }, 1000);
     }
 
     function flipCard() {
       const card = this;
       if (card.classList.contains('flipped') || flipped.length === 2) return;
+
       card.classList.add('flipped');
       card.textContent = card.dataset.emoji;
       flipped.push(card);
-      memoryMoves++;
-      document.getElementById('memory-moves').textContent = memoryMoves;
+      moves++;
+      document.getElementById('memory-moves').textContent = moves;
+
       if (flipped.length === 2) {
         if (flipped[0].dataset.emoji === flipped[1].dataset.emoji) {
-          matched.push(...flipped);
+          matched.push(flipped[0], flipped[1]);
+          setTimeout(() => drawLineBetween(flipped[0], flipped[1]), 500);
           flipped = [];
         } else {
           setTimeout(() => {
-            flipped.forEach(c => { c.classList.remove('flipped'); c.textContent = ''; });
+            flipped.forEach(c => {
+              c.classList.remove('flipped');
+              c.textContent = '';
+            });
             flipped = [];
           }, 1000);
         }
       }
     }
 
-    setInterval(() => {
-      memoryTimer++;
-      document.getElementById('memory-time').textContent = memoryTimer;
-    }, 1000);
-
-    // COLORING
-    const canvas = document.getElementById('colorCanvas');
-    const ctx = canvas.getContext('2d');
-    let painting = false, colorTimer = 0, colorStarted = false;
-
-    canvas.addEventListener('mousedown', () => {
-      painting = true;
-      if (!colorStarted) {
-        colorStarted = true;
-        setInterval(() => {
-          colorTimer++;
-          document.getElementById('color-time').textContent = colorTimer;
-        }, 1000);
-      }
-    });
-    canvas.addEventListener('mouseup', () => painting = false);
-    canvas.addEventListener('mousemove', draw);
-
-    function draw(e) {
-      if (!painting) return;
-      ctx.fillStyle = '#' + Math.floor(Math.random() * 16777215).toString(16);
-      ctx.fillRect(e.offsetX, e.offsetY, 4, 4);
+    function drawLineBetween(card1, card2) {
+      const rect1 = card1.getBoundingClientRect();
+      const rect2 = card2.getBoundingClientRect();
+      const x1 = rect1.left + rect1.width / 2 - canvas.offsetLeft;
+      const y1 = rect1.top + rect1.height / 2 - canvas.offsetTop;
+      const x2 = rect2.left + rect2.width / 2 - canvas.offsetLeft;
+      const y2 = rect2.top + rect2.height / 2 - canvas.offsetTop;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = "#ff66cc";
+      ctx.lineWidth = 4;
+      ctx.stroke();
     }
 
-    function clearCanvas() {
+    function drawLines() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    // COOKIES
-    function acceptCookies() {
-      document.getElementById('cookie-banner').style.display = 'none';
-      localStorage.setItem('cookiesAccepted', 'true');
-    }
-    if (localStorage.getItem('cookiesAccepted')) {
-      document.getElementById('cookie-banner').style.display = 'none';
-    }
-
-    createBoard();
+    window.onload = startGame;
   </script>
 </body>
 </html>
