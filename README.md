@@ -1,6 +1,6 @@
 # Zaproszenie na Urodziny Hani 🎉
 
-Statyczna strona zaproszenia z animacją oraz grą pamięć (memory game)..
+Zaproszenie z animacją oraz grą
 
 ## Lokalizacja imprezy:
 **Sala Zabaw KIDSY**  
@@ -11,7 +11,3 @@ Mętów 199D; 20-388 Lublin
 
 ## Gra pamięć
 Gra wbudowana w stronę – kliknij dwa pasujące emoji aby zdobywać punkty!
-
-## Deployment
-- Repozytorium na GitHub
-- Hosting: [Vercel](https://vercel.com/)
